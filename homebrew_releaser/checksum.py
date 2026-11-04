@@ -40,15 +40,15 @@ class Checksum:
 
     @staticmethod
     def upload_checksum_file(latest_release: dict[str, Any]):
-        """Uploads a `checksum.txt` file to the latest release of the repo."""
+        """Uploads a `checksum.txt` file to the provided release."""
         logger = woodchips.get(LOGGER_NAME)
 
-        latest_release_id = latest_release['id']
+        release_id = latest_release['id']
 
         with open(CHECKSUM_FILE, 'rb') as filename:
             checksum_binary = filename.read()
 
-        upload_url = f'https://uploads.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/{latest_release_id}/assets?name={CHECKSUM_FILE}'  # noqa
+        upload_url = f'https://uploads.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/{release_id}/assets?name={CHECKSUM_FILE}'  # noqa
         headers = GITHUB_HEADERS
         headers['Content-Type'] = 'text/plain'
 
