@@ -35,6 +35,10 @@ def test_run_github_action_string_false_config(
     mock_upload_checksum_file,
     mock_update_readme,
 ):
+    mock_make_github_get_request.return_value.json.side_effect = [
+        {'private': False, 'name': 'repo'},
+        {'id': 1, 'tag_name': 'v1.0.0', 'assets': []},
+    ]
     App.run_github_action()
 
     # Check that string false works by running git operations

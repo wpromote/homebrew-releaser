@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from urllib.parse import quote
 
 import woodchips
 
@@ -72,13 +73,19 @@ class App:
 
         logger.info(f'Collecting data about {GITHUB_REPO}...')
         repository = Utils.make_github_get_request(url=f'{GITHUB_BASE_URL}/repos/{GITHUB_OWNER}/{GITHUB_REPO}').json()
-        latest_release = Utils.make_github_get_request(
-            url=f'https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest'
-        ).json()
-        assets = latest_release['assets']
-        version = VERSION or latest_release['tag_name']
+        release_tag = quote(VERSION, safe='') if VERSION else None
+        release_url = (
+            f'{GITHUB_BASE_URL}/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/tags/{release_tag}'
+            if VERSION
+            else f'{GITHUB_BASE_URL}/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest'
+        )
+        release = Utils.make_github_get_request(url=release_url).json()
+        assets = release['assets']
+        version = VERSION or release['tag_name']
+        version_url = quote(version, safe='')
         version_no_v = version.lstrip('v')
-        logger.info(f'Latest release ({version}) successfully identified!')
+        release_description = f'Requested release ({version})' if VERSION else f'Latest release ({version})'
+        logger.info(f'{release_description} successfully identified!')
 
         logger.info('Generating tar archive checksum(s)...')
         archive_urls = []
@@ -88,11 +95,11 @@ class App:
         if repository["private"]:
             logger.info('Repository is private. Using auto-generated release tarball and zipball REST API endpoints.')
             archive_base_url = f'{GITHUB_BASE_URL}/repos/{GITHUB_OWNER}/{GITHUB_REPO}'
-            auto_generated_release_tar = f'{archive_base_url}/tarball/{version}'
-            auto_generated_release_zip = f'{archive_base_url}/zipball/{version}'
+            auto_generated_release_tar = f'{archive_base_url}/tarball/{version_url}'
+            auto_generated_release_zip = f'{archive_base_url}/zipball/{version_url}'
         else:
             logger.info('Repository is public. Using auto-generated release tarball and zipball public URLs.')
-            archive_base_url = f'https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/archive/refs/tags/{version}'
+            archive_base_url = f'https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/archive/refs/tags/{version_url}'
             auto_generated_release_tar = f'{archive_base_url}.tar.gz'
             auto_generated_release_zip = f'{archive_base_url}.zip'
 
@@ -100,7 +107,8 @@ class App:
         archive_urls.append(auto_generated_release_zip)
 
         target_browser_download_base_url = (
-            f'https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/download/{version}/{GITHUB_REPO}-{version_no_v}'
+            f'https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/download/{version_url}/'
+            f'{GITHUB_REPO}-{version_no_v}'
         )
         if TARGET_DARWIN_AMD64:
             archive_urls.append(f'{target_browser_download_base_url}-darwin-amd64.tar.gz')
@@ -177,8 +185,8 @@ class App:
             logger.info(f'Skipping upload of checksum.txt to {HOMEBREW_TAP}.')
             logger.info(f'Skipping push to {HOMEBREW_TAP}.')
         else:
-            logger.info(f'Attempting to upload checksum.txt to the latest release of {GITHUB_REPO}...')
-            Checksum.upload_checksum_file(latest_release)
+            logger.info(f'Attempting to upload checksum.txt to release {version} of {GITHUB_REPO}...')
+            Checksum.upload_checksum_file(release)
             logger.info(f'Attempting to release {version} of {GITHUB_REPO} to {HOMEBREW_TAP}...')
             Git.push(HOMEBREW_TAP, HOMEBREW_OWNER)
             logger.info(f'Successfully released {version} of {GITHUB_REPO} to {HOMEBREW_TAP}!')

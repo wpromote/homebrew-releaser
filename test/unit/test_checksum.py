@@ -38,16 +38,20 @@ def test_get_checksum_process_error(mock_subprocess, mock_tar_filename):
         Checksum.get_checksum(mock_tar_filename)
 
 
+@patch('homebrew_releaser.checksum.GITHUB_OWNER', 'example-owner')
+@patch('homebrew_releaser.checksum.GITHUB_REPO', 'example-project')
 @patch('requests.post')
 @patch('homebrew_releaser.utils.Utils.make_github_get_request')
 def test_upload_checksum_file(mock_make_github_get_request, mock_post_request):
-    """Tests that we make the GET call to retrieve the latest release and the
-    POST call to upload the checksum.txt file.
-    """
+    """Tests that we upload the checksum file to the provided release."""
     with patch('builtins.open', mock_open()):
         Checksum.upload_checksum_file({'id': 1, 'tag_name': 'v1.0.0'})
 
         mock_post_request.assert_called_once()
+        assert mock_post_request.call_args.args[0] == (
+            'https://uploads.github.com/repos/example-owner/example-project/releases/1/assets?name=checksum.txt'
+        )
+        mock_make_github_get_request.assert_not_called()
 
 
 @patch('requests.post', side_effect=requests.exceptions.RequestException('mock-error'))
