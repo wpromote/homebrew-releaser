@@ -142,6 +142,15 @@ jobs:
 
 ## Development
 
+Native development requires Python 3.12. The `just install` recipe uses `python3` from your `PATH`,
+so ensure it resolves to Python 3.12. If it does not, create a virtual environment and install
+the development dependencies with Python 3.12 explicitly:
+
+```bash
+python3.12 -m venv venv
+venv/bin/python -m pip install -e '.[dev]'
+```
+
 ```bash
 # Get a comprehensive list of development tools
 just --list
